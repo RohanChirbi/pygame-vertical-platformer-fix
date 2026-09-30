@@ -9,21 +9,35 @@ PLAYER_W, PLAYER_H = 36, 36
 PLATFORM_H = 14
 COIN_R = 7
 LIVES_START = 3
+# active_sparkles = []
 
 
 def platform_color(index, total):
     """Return an (r, g, b) colour override for the platform at this index (0 is the ground), or None for the default green."""
-    pass
+    if total <= 0:
+        return None
+
+    ratio = max(0.0, min(1.0, index / total))
+
+    start = (100, 180, 100)
+    end = (180, 100, 220)
+
+    return tuple(
+        int(start[i] + (end[i] - start[i]) * ratio)
+        for i in range(3)
+    )
 
 
 def moving_platform_speed(index, total):
     """Return a horizontal oscillation speed in pixels/frame for the platform at this index, or None/0 to keep it static."""
-    pass
+    if index > 0 and index % 3 == 0:
+        return 2
+    return 0
 
 
 def on_coin_collected(coin, score):
     """Called the instant the player collects a coin, after its value has been added to the score. Add a sound or sparkle here."""
-    pass
+    return Sparkle(coin.pos)
 
 
 class Platform:
@@ -54,6 +68,39 @@ class Coin:
 
     def draw(self, screen, cam_y):
         pygame.draw.circle(screen, (250, 210, 60), (self.pos.x, self.pos.y - cam_y), COIN_R)
+
+class Sparkle:
+    def __init__(self, pos):
+        self.pos = pygame.Vector2(pos)
+        self.age = 0
+        self.lifetime = 12
+
+    def update(self):
+        self.age += 1
+
+    def draw(self, screen, cam_y):
+        if self.age >= self.lifetime:
+            return
+
+        progress = self.age / self.lifetime
+        radius = int(4 + 10 * progress)
+        alpha = int(255 * (1 - progress))
+
+        surface = pygame.Surface((radius * 2 + 4, radius * 2 + 4), pygame.SRCALPHA)
+        center = surface.get_rect().center
+
+        pygame.draw.circle(
+            surface,
+            (255, 240, 100, alpha),
+            center,
+            radius,
+            width=2,
+        )
+
+        screen.blit(
+            surface,
+            (self.pos.x - radius - 2, self.pos.y - cam_y - radius - 2),
+        )
 
 
 def generate_platforms(num, start_y, width):
@@ -126,6 +173,7 @@ class Game:
     def reset(self):
         self.platforms = generate_platforms(60, HEIGHT - 40, WIDTH)
         self.coins = spawn_coins(self.platforms)
+        self.sparkles = []
         self.player = Player(WIDTH // 2 - PLAYER_W // 2, HEIGHT - 100)
         self.cam_y = 0
         self.height = 0
@@ -153,7 +201,7 @@ class Game:
             self.cam_y = target_cam
 
         current_height = max(0, (HEIGHT - 40 - self.player.rect.y) // 10)
-        self.height = current_height
+        self.height = max(self.height, current_height)
 
         if self.player.on_ground:
             self.last_safe = pygame.Vector2(self.player.rect.x, self.player.rect.y)
@@ -162,8 +210,14 @@ class Game:
             if not coin.taken and self.player.rect.collidepoint(coin.pos):
                 coin.taken = True
                 self.coin_score += 50
-                on_coin_collected(coin, self.score())
+                sparkle = on_coin_collected(coin, self.score())
+                if sparkle:
+                    self.sparkles.append(sparkle)
         self.coins = [c for c in self.coins if not c.taken]
+
+        for sparkle in self.sparkles:
+            sparkle.update()
+        self.sparkles = [s for s in self.sparkles if s.age < s.lifetime]
 
         if self.player.rect.top - self.cam_y > HEIGHT + 50:
             self.lives -= 1
@@ -182,6 +236,9 @@ class Game:
             plat.draw(screen, self.cam_y)
         for coin in self.coins:
             coin.draw(screen, self.cam_y)
+        for sparkle in self.sparkles:
+            sparkle.draw(screen, self.cam_y)
+
         self.player.draw(screen, self.cam_y)
 
         hud = self.font.render(f"Height: {self.height}m  Coins: {self.coin_score // 50}  Lives: {self.lives}", True, (200, 200, 200))
