@@ -103,13 +103,13 @@ Coin collection preserves the existing 50-point reward.
 
 ### Before Changes
 
-[Watch the 10-second before video]()
+[Watch the 10-second before video](deliverables/before_vid.mp4)
 
 Demonstrates the original height-tracking bug.
 
 ### After Changes
 
-[Watch the 10-second after video]()
+[Watch the 10-second after video](deliverables/after_vid.mp4)
 
 Demonstrates the height fix and the added features.
 
@@ -117,16 +117,21 @@ Demonstrates the height fix and the added features.
 
 LLM Used: ChatGPT
 
-[Complete conversation]()
+[Complete conversation](https://chatgpt.com/share/6abd5c2e-aa54-83e8-b416-9c32ed242367)
 
 ---
 
 ## Folder Structure
 
 ```
-climber/
+climber-repair-lab/
 ├── game.py
-└── README.md
+├── README.md
+├── .gitignore
+└── deliverables/
+    ├── before_vid.mp4
+    ├── after_vid.mp4
+    ├── chat_link.txt
 ```
 
 ---
