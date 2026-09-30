@@ -39,36 +39,85 @@ python game.py
 **Controls:** A/Left or D/Right to move, Space/W/Up to jump, `R` to reset.
 
 ---
+## Bug Fix
 
-## Tasks to Complete
+### Peak-height tracking
 
-Each task must be completed using an iterative process involving LLM suggestions and your critical code review.
+Original behaviour:
+The HUD recalculated height from the player's current position, so the displayed height decreased when the player descended.
 
-### Task 1: Fix the height-score bug
+Implemented fix:
+Retained the maximum of the previous height and the current height. Simply losing a life, falling, respawning at 'last_safe' cannot reduce the height. reset(), on pressing R, sets height back to the initial value.
 
-> The "Height" shown in the HUD is meant to track the *best* height the player has ever reached during a run — like every real climbing or endless-runner score, it should never go down. In the current build, the height recalculates fresh every frame from the player's current position, so climbing up and then coming back down (for example, after riding a moving platform, or backtracking to grab a coin) makes the displayed height drop instead of holding at its peak. Look at where `self.height` is assigned in `Game.update` and compare it with how the height is actually meant to behave.
+## Added Features
 
-### Task 2: Implement `platform_color(index, total)`
+### Platform Colour Gradient
 
-> Called once per platform, at generation time, as `self.color = platform_color(index, total) or (100, 180, 100)` inside `Platform.__init__`. `index` is the platform's position in the climb (0 is the ground, higher numbers are higher up); `total` is the total number of generated platforms. Return an `(r, g, b)` color, or `None` to keep the default green. Idea: shift the color gradually as `index` approaches `total`, so higher platforms look different from lower ones.
+Function: `platform_color(index, total)`
 
-### Task 3: Implement `moving_platform_speed(index, total)`
+Platforms transition gradually from green RGB (100, 180, 100)
+at the ground to purple RGB (180, 100, 220) at the highest platform.
 
-> Called once per (non-ground) platform, at generation time, as part of `self.speed = moving_platform_speed(index, total) or 0`. It receives the same `index`/`total` as above and should return a horizontal oscillation speed in pixels per frame, or `None`/`0` to keep that platform static. The oscillation mechanism itself — bouncing between bounds, carrying the player along while they stand on it — is already implemented in the `Platform` class and `Game.update`; you only need to decide which platforms move and how fast. Idea: return a small speed for every third platform.
+The function calculates a normalized ratio using index / total
+and linearly interpolates each RGB channel between the two endpoint
+colors. Higher platform indices therefore produce colors closer
+to purple.
 
-### Task 4: Implement `on_coin_collected(coin, score)`
+### Moving platforms
 
-> Called from `Game.update` the instant the player touches a coin, right after its 50 points have been added to the score and the coin has been marked collected. It receives the `Coin` that was collected and the score after it was added. Its return value is ignored. Idea: a sparkle effect at the coin's position, or a running "combo" counter for coins collected without falling.
+Function: `moving_platform_speed(index, total)`
 
----
+Every third platform i.e 1, 3, 6, 9, etc moves. They don't disappear, but oscillate within their bounds.
 
-## Expected Behavior
+The existing oscillation and player-carrying logic is reused.
+The ground remains static.
 
-- The player only lands on a platform when falling onto it from above; it can't be snapped up onto a platform's underside or side
-- The camera scrolls upward as the player climbs and never scrolls back down, even if the player falls
-- Coins disappear the moment they're touched and immediately add to the score
-- Falling off the bottom of the screen costs a life and respawns the player at their last safe platform; the game ends when lives reach zero
-- Reaching the topmost platform ends the game with a win
+### Coin Collection Effect
+
+Function: `on_coin_collected(coin, score)`
+
+The sparkle lasts for ~0.2 seconds on a 60 fps setting. The coin_score increases by 50 every time a coin is picked up, and is displayed in simple coin counts in the game scoreboard.
+
+Coin collection preserves the existing 50-point reward.
+
+## Testing
+| Test | Result |
+|---|---|
+| Height increases when a new peak is reached | Positive |
+| Height does not decrease during descent | Positive |
+| Peak height persists after losing a life | Positive |
+| R resets height and starts a new run | Positive |
+| Platform colours vary as intended | Gradually change with index |
+| Selected platforms move and reverse at their bounds | Positive |
+| Moving platforms carry the player | Positive |
+| Coins disappear and award 50 points | Positive |
+| Coin effect appears at the correct screen position | Positive - world position is retained |
+| Restart clears active coin effects | Positive |
+| Player lands only from above | Positive |
+| Camera scrolls upward but not downward | Positive |
+| Falling removes a life and respawns the player | Positive |
+| Losing all lives triggers the lose state | Positive |
+| Reaching the top triggers the win state | Positive |
+
+## Gameplay Evidence
+
+### Before Changes
+
+[Watch the 10-second before video]()
+
+Demonstrates the original height-tracking bug.
+
+### After Changes
+
+[Watch the 10-second after video]()
+
+Demonstrates the height fix and the added features.
+
+## LLM
+
+LLM Used: ChatGPT
+
+[Complete conversation]()
 
 ---
 
